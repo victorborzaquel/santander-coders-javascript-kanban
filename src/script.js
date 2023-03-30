@@ -29,15 +29,15 @@ const initialSectionData = {
 const initialTaskData = {
   currentId: 1,
 
-  tasks:[
+  tasks: [
     {
-  id: 1,
-  title: 'Primeira Tarefa',
-  description: 'Descrição da primeira tarefa',
-  status: 'todo',
-  editing: false,
-  }
-]
+      id: 1,
+      title: 'Primeira Tarefa',
+      description: 'Descrição da primeira tarefa',
+      status: 'todo',
+      editing: false,
+    }
+  ]
 }
 
 const taskService = {
@@ -109,27 +109,27 @@ const taskService = {
 
   cancelTaskEditing() {
     const task = this.getEditingTask();
-    
-        if (task) {
-          if (task.title === '' && task.description === '') {
-            this.deleteTask(task.id);
-            return;
-          }
-          
-          this.updateTask(task.id, { 
-            ...task,
-              editing: false 
-          });
-        }
-      },
+
+    if (task) {
+      if (task.title === '' && task.description === '') {
+        this.deleteTask(task.id);
+        return;
+      }
+
+      this.updateTask(task.id, {
+        ...task,
+        editing: false
+      });
+    }
+  },
 
   render: {
-      task(task) {
-        const card = document.createElement('div');
+    task(task) {
+      const card = document.createElement('div');
       card.classList.add('card', 'mt-3', 'bg-white', 'shadow', 'border-0', 'rounded');
       card.id = `task-${task.id}`;
       card.setAttribute('draggable', true);
-     
+
       const string = `
         <div class="card-body">
           <header class="d-flex justify-content-between">
@@ -143,7 +143,7 @@ const taskService = {
             <p class="card-text">${task.description}</p>
         </div>
       `;
-    
+
       card.innerHTML = string;
 
       card.addEventListener('dragstart', e => e.dataTransfer.setData('data-draggable-id', e.target.id));
@@ -153,17 +153,17 @@ const taskService = {
         taskService.editTask(task.id);
       });
 
-      card.querySelector('[task-delete]').addEventListener('click', () =>  taskService.deleteTask(task.id));
-    
-      return card;
-      },
+      card.querySelector('[task-delete]').addEventListener('click', () => taskService.deleteTask(task.id));
 
-      taskEdit(task) {
-        const card = document.createElement('div');
-        card.classList.add('card', 'mt-3', 'bg-white', 'shadow', 'border-0', 'rounded');
-        card.setAttribute('data-task-edit', true);
-      
-        const string = `
+      return card;
+    },
+
+    taskEdit(task) {
+      const card = document.createElement('div');
+      card.classList.add('card', 'mt-3', 'bg-white', 'shadow', 'border-0', 'rounded');
+      card.setAttribute('data-task-edit', true);
+
+      const string = `
                     <div class="card-body">
                       <form>
                         <div class="form-group pb-3">
@@ -186,71 +186,71 @@ const taskService = {
                       </form>
                     </div>
         `;
-      
-        card.innerHTML = string;
 
-        card.querySelector('[form-cancel]').addEventListener('click', () => taskService.cancelTaskEditing());
+      card.innerHTML = string;
 
-        card.querySelector('[form-confirm]').addEventListener('click', () => {
-          const title = card.querySelector('#title-input').value;
-          const description = card.querySelector('#description-input').value;
+      card.querySelector('[form-cancel]').addEventListener('click', () => taskService.cancelTaskEditing());
 
-          if (title === '' || description === '') {
-            if (title === '') {
-              card.querySelector('#title-input-danger').classList.remove('d-none');
-            }
+      card.querySelector('[form-confirm]').addEventListener('click', () => {
+        const title = card.querySelector('#title-input').value;
+        const description = card.querySelector('#description-input').value;
 
-            if (description === '') {
-              card.querySelector('#description-input-danger').classList.remove('d-none');
-            }
-
-            return;
+        if (title === '' || description === '') {
+          if (title === '') {
+            card.querySelector('#title-input-danger').classList.remove('d-none');
           }
 
-          const updatedTask = {
-            ...task,
-            title,
-            description,
-            editing: false,
-          };
-          taskService.updateTask(task.id, updatedTask);
-        });
+          if (description === '') {
+            card.querySelector('#description-input-danger').classList.remove('d-none');
+          }
 
-        card.querySelector('#title-input').addEventListener('input', () => {
-          card.querySelector('#title-input-danger').classList.add('d-none');
-        });
+          return;
+        }
 
-        card.querySelector('#description-input').addEventListener('input', () => {
-          card.querySelector('#description-input-danger').classList.add('d-none');
-        });
+        const updatedTask = {
+          ...task,
+          title,
+          description,
+          editing: false,
+        };
+        taskService.updateTask(task.id, updatedTask);
+      });
 
-        
+      card.querySelector('#title-input').addEventListener('input', () => {
+        card.querySelector('#title-input-danger').classList.add('d-none');
+      });
 
-        return card;
-      },
+      card.querySelector('#description-input').addEventListener('input', () => {
+        card.querySelector('#description-input-danger').classList.add('d-none');
+      });
 
-      tasks() {
-        const tasks = taskService.getTasks();
 
-        const taskContainers = $$('[data-dropzone]');
-        
-        if (!tasks) {
-          taskContainers.forEach(taskContainer => taskContainer.innerHTML = `
+
+      return card;
+    },
+
+    tasks() {
+      const tasks = taskService.getTasks();
+
+      const taskContainers = $$('[data-dropzone]');
+
+      if (!tasks) {
+        taskContainers.forEach(taskContainer => taskContainer.innerHTML = `
           <div class="d-flex justify-content-center py-5">
             <img height="50" src = "./assets/load.svg" alt="Load"/>
           </div>
           `);
-          return;
-        }
-
-        taskContainers.forEach(taskContainer => taskContainer.innerHTML = '');
-    
-        tasks.forEach(task => {
-          const taskElement = task.editing ? this.taskEdit(task) : this.task(task);
-          const taskContainer = document.querySelector(`[data-dropzone="${task.status}"]`);
-          taskContainer.appendChild(taskElement);
-        });
+        return;
       }
+
+      taskContainers.forEach(taskContainer => taskContainer.innerHTML = '');
+
+      tasks.forEach(task => {
+        const taskElement = task.editing ? this.taskEdit(task) : this.task(task);
+        const taskContainer = document.querySelector(`[data-dropzone="${task.status}"]`);
+        taskContainer.appendChild(taskElement);
+      });
+    }
   }
 }
 
@@ -281,23 +281,23 @@ const sectionService = {
 
       sectionElement.querySelector('[create-task-button]').addEventListener('click', () => {
         taskService.cancelTaskEditing();
-      
+
         taskService.createTaskEdit(section.status);
       });
 
       const dropzone = sectionElement.querySelector('[data-dropzone]');
-      
+
       dropzone.addEventListener('dragover', e => e.preventDefault());
 
       dropzone.addEventListener('drop', e => {
         e.preventDefault();
         taskService.cancelTaskEditing();
-        
+
         const dataId = e.dataTransfer.getData('data-draggable-id');
         const taskId = Number.parseInt(dataId.split('-')[1]);
-        
+
         const task = taskService.getTask(taskId);
-        
+
         taskService.updateTask(taskId, { ...task, status: section.status });
       });
 
