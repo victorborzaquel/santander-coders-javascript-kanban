@@ -5,7 +5,7 @@ const taskDatabase = {};
 const sectionDatabase = {};
 
 const initialSectionData = {
-  currentId: 1,
+  currentId: 3,
 
   sections: [
     {
@@ -224,8 +224,6 @@ const taskService = {
         card.querySelector('#description-input-danger').classList.add('d-none');
       });
 
-
-
       return card;
     },
 
@@ -239,7 +237,8 @@ const taskService = {
           <div class="d-flex justify-content-center py-5">
             <img height="50" src = "./assets/load.svg" alt="Load"/>
           </div>
-          `);
+        `);
+
         return;
       }
 
@@ -280,6 +279,10 @@ const sectionService = {
       sectionElement.innerHTML = string;
 
       sectionElement.querySelector('[create-task-button]').addEventListener('click', () => {
+        if (!taskService.database.currentId) {
+          return;
+        }
+
         taskService.cancelTaskEditing();
 
         taskService.createTaskEdit(section.status);
@@ -348,6 +351,7 @@ getDatabase('sections', initialSectionData).then(data => {
     taskDatabase.currentId = data.currentId;
     taskDatabase.tasks = data.tasks;
     taskService.render.tasks();
+    taskService.cancelTaskEditing();
   });
 });
 
