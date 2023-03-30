@@ -1,0 +1,7 @@
+i, [data-task-drop] {
+  cursor: pointer;
+}
+
+[data-section] {
+  width: 500px;
+}
