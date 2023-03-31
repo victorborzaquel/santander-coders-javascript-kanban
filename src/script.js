@@ -36,7 +36,7 @@ const taskService = {
 
     this.database.tasks[taskIndex] = task;
     this.save();
-
+    
     const taskCard = $(`#task-${id}`);
 
     if (taskOldStatus === task.status) {
@@ -112,7 +112,7 @@ const taskService = {
       card.id = `task-${task.id}`;
       card.setAttribute('draggable', true);
 
-      const string = `
+      card.innerHTML = `
         <div class="card-body">
           <header class="d-flex justify-content-between">
             <h5 class="card-title">${task.title}</h5>
@@ -125,8 +125,6 @@ const taskService = {
             <p class="card-text">${task.description}</p>
         </div>
       `;
-
-      card.innerHTML = string;
 
       card.addEventListener('dragstart', e => e.dataTransfer.setData('data-draggable-id', e.target.id));
 
@@ -214,27 +212,19 @@ const taskService = {
   },
 
   renderAll() {
-    const tasks = taskService.findAll();
+    const tasks = this.findAll();
 
-    const taskContainers = $$('[data-dropzone]');
+    $$('[data-dropzone]').forEach(taskContainer => taskContainer.innerHTML = tasks ? '' : this.renderLoading());
 
-    if (!tasks) {
-      taskContainers.forEach(taskContainer => taskContainer.innerHTML = `
-          <div class="d-flex justify-content-center py-5">
-            <img height="50" src = "./assets/load.svg" alt="Load"/>
-          </div>
-        `);
+    tasks?.forEach(task => $(`[data-dropzone="${task.status}"]`).appendChild(this.render(task)));
+  },
 
-      return;
-    }
-
-    taskContainers.forEach(taskContainer => taskContainer.innerHTML = '');
-
-    tasks.forEach(task => {
-      const taskElement = this.render(task);
-      const taskContainer = document.querySelector(`[data-dropzone="${task.status}"]`);
-      taskContainer.appendChild(taskElement);
-    });
+  renderLoading() {
+    return `
+      <div class="d-flex justify-content-center py-5">
+        <img height="50" src = "./assets/load.svg" alt="Load"/>
+      </div>
+    `;
   }
 }
 
@@ -285,7 +275,7 @@ const sectionService = {
     sectionElement.classList.add('section-container', 'border', 'p-4', 'mx-2', 'pt-3', 'bg-light', 'mt-3', 'rounded');
     sectionElement.id = `section-${section.id}`;
 
-    const string = `
+    sectionElement.innerHTML = `
         <header class="border-bottom d-flex justify-content-between align-items-baseline">
           <h2 class="fs-5 mb-0">${section.title}</h2>
           <i create-task-button="${section.id}" class="bi bi-plus-circle-fill text-success fs-4"></i>
@@ -294,15 +284,10 @@ const sectionService = {
         <section id="dropzone-${section.id}" dropzone="move" data-dropzone="${section.status}" class="h-100"></section>
       `;
 
-    sectionElement.innerHTML = string;
-
     sectionElement.querySelector('[create-task-button]').addEventListener('click', () => {
-      if (!taskService.database.currentId) {
-        return;
-      }
+      if (!taskService.database.currentId)  return;
 
       taskService.cancelTaskEditing();
-
       taskService.create(section.status);
     });
 
@@ -326,26 +311,21 @@ const sectionService = {
   },
 
   renderAll() {
-    const sections = sectionService.findAll();
+    const sections = this.findAll();
+    const sectionContainer = $('[data-section-container]');
 
-    const sectionContainer = document.querySelector('[data-section-container]');
+    sectionContainer.innerHTML = sections ? '' : this.renderLoading();
 
-    if (!sections) {
-      sectionContainer.innerHTML = `
-        <div class="d-flex justify-content-center py-5">
-          <img height="200" src = "./assets/load.svg" alt="Load"/>
-        </div>
-        `;
-      return;
-    }
-
-    sectionContainer.innerHTML = '';
-
-    sections.forEach(section => {
-      const sectionElement = this.render(section);
-      sectionContainer.appendChild(sectionElement);
-    });
+    sections?.forEach(section => sectionContainer.appendChild(this.render(section)));
   },
+
+  renderLoading() {
+    return `
+      <div class="d-flex justify-content-center py-5">
+        <img height="200" src = "./assets/load.svg" alt="Load"/>
+      </div>
+    `;
+  }
 }
 
   ; (renderItens = () => {
