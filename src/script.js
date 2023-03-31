@@ -1,65 +1,22 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
-const taskDatabase = {};
-const sectionDatabase = {};
-
-const initialSectionData = {
-  currentId: 3,
-
-  sections: [
-    {
-      id: 1,
-      title: 'A fazer',
-      status: 'todo',
-    },
-    {
-      id: 2,
-      title: 'Fazendo',
-      status: 'doing',
-    },
-    {
-      id: 3,
-      title: 'Feito',
-      status: 'done',
-    },
-  ],
-}
-
-const initialTaskData = {
-  currentId: 1,
-
-  tasks: [
-    {
-      id: 1,
-      title: 'Primeira Tarefa',
-      description: 'Descrição da primeira tarefa',
-      status: 'todo',
-      editing: false,
-    }
-  ]
-}
-
 const taskService = {
-  database: taskDatabase,
+  database: {},
 
-  isEditing() {
-    return this.database.tasks.some(task => task.editing);
-  },
-
-  getEditingTask() {
+  findEditingTask() {
     return this.database.tasks.find(task => task.editing);
   },
 
-  getTasks() {
+  findAll() {
     return this.database.tasks;
   },
 
-  getTask(id) {
+  findById(id) {
     return this.database.tasks.find(task => task.id === id);
   },
 
-  createTaskEdit(status = 'todo') {
+  create(status) {
     const task = {
       id: ++this.database.currentId,
       title: '',
@@ -70,61 +27,86 @@ const taskService = {
 
     this.database.tasks.push(task);
     this.save();
+    $(`[data-dropzone="${status}"]`).appendChild(this.render(task));
   },
 
-  createTask(title, description) {
-    const task = {
-      id: ++this.database.currentId,
-      title,
-      description,
-      status: 'todo',
-      editing: false,
-    };
-
-    this.database.tasks.push(task);
-    this.save();
-  },
-
-  updateTask(id, task) {
+  update(id, task) {
     const taskIndex = this.database.tasks.findIndex(task => task.id === id);
+    const taskOldStatus = this.database.tasks[taskIndex].status;
+
     this.database.tasks[taskIndex] = task;
     this.save();
+
+    const taskCard = $(`#task-${id}`);
+
+    if (taskOldStatus === task.status) {
+      $(`#task-${id}`).replaceWith(this.render(task));
+    } else {
+      $(`[data-dropzone="${taskOldStatus}"]`).removeChild(taskCard);
+      $(`[data-dropzone="${task.status}"]`).appendChild(taskCard);
+    }
   },
 
-  editTask(id) {
-    const task = this.getTask(id);
-    taskService.updateTask(task.id, { ...task, editing: true });
-  },
-
-  deleteTask(id) {
+  delete(id) {
     const taskIndex = this.database.tasks.findIndex(task => task.id === id);
     this.database.tasks.splice(taskIndex, 1);
     this.save();
+    $(`#task-${id}`).remove();
   },
 
   save() {
     localStorage.setItem('tasks', JSON.stringify(this.database));
-    this.render.tasks();
+  },
+
+  load() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const data = JSON.parse(localStorage.getItem('tasks'));
+        const initialData = {
+          currentId: 3,
+
+          sections: [
+            {
+              id: 1,
+              title: 'A fazer',
+              status: 'todo',
+            },
+            {
+              id: 2,
+              title: 'Fazendo',
+              status: 'doing',
+            },
+            {
+              id: 3,
+              title: 'Feito',
+              status: 'done',
+            },
+          ],
+        }
+
+        resolve(data || initialData);
+      }, 1000);
+    });
   },
 
   cancelTaskEditing() {
-    const task = this.getEditingTask();
+    const task = this.findEditingTask();
 
-    if (task) {
-      if (task.title === '' && task.description === '') {
-        this.deleteTask(task.id);
-        return;
-      }
+    if (!task) return;
 
-      this.updateTask(task.id, {
-        ...task,
-        editing: false
-      });
+    if (task.title === '' && task.description === '') {
+      this.delete(task.id);
+      return;
     }
+
+    this.update(task.id, {
+      ...task,
+      editing: false
+    });
   },
 
-  render: {
-    task(task) {
+  render(task) {
+    const taskCard = () => {
       const card = document.createElement('div');
       card.classList.add('card', 'mt-3', 'bg-white', 'shadow', 'border-0', 'rounded');
       card.id = `task-${task.id}`;
@@ -150,17 +132,18 @@ const taskService = {
 
       card.querySelector('[task-edit]').addEventListener('click', () => {
         taskService.cancelTaskEditing();
-        taskService.editTask(task.id);
+        taskService.update(task.id, { ...task, editing: true });
       });
 
-      card.querySelector('[task-delete]').addEventListener('click', () => taskService.deleteTask(task.id));
+      card.querySelector('[task-delete]').addEventListener('click', () => taskService.delete(task.id));
 
       return card;
-    },
+    }
 
-    taskEdit(task) {
+    const taskEdit = () => {
       const card = document.createElement('div');
       card.classList.add('card', 'mt-3', 'bg-white', 'shadow', 'border-0', 'rounded');
+      card.id = `task-${task.id}`;
       card.setAttribute('data-task-edit', true);
 
       const string = `
@@ -213,7 +196,7 @@ const taskService = {
           description,
           editing: false,
         };
-        taskService.updateTask(task.id, updatedTask);
+        taskService.update(task.id, updatedTask);
       });
 
       card.querySelector('#title-input').addEventListener('input', () => {
@@ -225,49 +208,84 @@ const taskService = {
       });
 
       return card;
-    },
+    }
 
-    tasks() {
-      const tasks = taskService.getTasks();
+    return task.editing ? taskEdit() : taskCard();
+  },
 
-      const taskContainers = $$('[data-dropzone]');
+  renderAll() {
+    const tasks = taskService.findAll();
 
-      if (!tasks) {
-        taskContainers.forEach(taskContainer => taskContainer.innerHTML = `
+    const taskContainers = $$('[data-dropzone]');
+
+    if (!tasks) {
+      taskContainers.forEach(taskContainer => taskContainer.innerHTML = `
           <div class="d-flex justify-content-center py-5">
             <img height="50" src = "./assets/load.svg" alt="Load"/>
           </div>
         `);
 
-        return;
-      }
-
-      taskContainers.forEach(taskContainer => taskContainer.innerHTML = '');
-
-      tasks.forEach(task => {
-        const taskElement = task.editing ? this.taskEdit(task) : this.task(task);
-        const taskContainer = document.querySelector(`[data-dropzone="${task.status}"]`);
-        taskContainer.appendChild(taskElement);
-      });
+      return;
     }
+
+    taskContainers.forEach(taskContainer => taskContainer.innerHTML = '');
+
+    tasks.forEach(task => {
+      const taskElement = this.render(task);
+      const taskContainer = document.querySelector(`[data-dropzone="${task.status}"]`);
+      taskContainer.appendChild(taskElement);
+    });
   }
 }
 
 const sectionService = {
-  database: sectionDatabase,
+  database: {},
 
-  getSections() {
+  findAll() {
     return this.database.sections;
   },
 
-  render: {
-    section(section) {
-      const sectionElement = document.createElement('div');
-      sectionElement.classList.add('border', 'p-4', 'mx-2', 'pt-3', 'bg-light', 'mt-3', 'rounded');
-      sectionElement.id = `section-${section.id}`;
-      sectionElement.setAttribute('data-section', true);
+  save() {
+    localStorage.setItem('sections', JSON.stringify(this.database));
+  },
 
-      const string = `
+  load() {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const data = JSON.parse(localStorage.getItem('sections'));
+        const initialData = {
+          currentId: 3,
+
+          sections: [
+            {
+              id: 1,
+              title: 'A fazer',
+              status: 'todo',
+            },
+            {
+              id: 2,
+              title: 'Fazendo',
+              status: 'doing',
+            },
+            {
+              id: 3,
+              title: 'Feito',
+              status: 'done',
+            },
+          ],
+        }
+
+        resolve(data || initialData);
+      }, 1000);
+    });
+  },
+
+  render(section) {
+    const sectionElement = document.createElement('div');
+    sectionElement.classList.add('section-container', 'border', 'p-4', 'mx-2', 'pt-3', 'bg-light', 'mt-3', 'rounded');
+    sectionElement.id = `section-${section.id}`;
+
+    const string = `
         <header class="border-bottom d-flex justify-content-between align-items-baseline">
           <h2 class="fs-5 mb-0">${section.title}</h2>
           <i create-task-button="${section.id}" class="bi bi-plus-circle-fill text-success fs-4"></i>
@@ -276,84 +294,72 @@ const sectionService = {
         <section id="dropzone-${section.id}" dropzone="move" data-dropzone="${section.status}" class="h-100"></section>
       `;
 
-      sectionElement.innerHTML = string;
+    sectionElement.innerHTML = string;
 
-      sectionElement.querySelector('[create-task-button]').addEventListener('click', () => {
-        if (!taskService.database.currentId) {
-          return;
-        }
+    sectionElement.querySelector('[create-task-button]').addEventListener('click', () => {
+      if (!taskService.database.currentId) {
+        return;
+      }
 
-        taskService.cancelTaskEditing();
+      taskService.cancelTaskEditing();
 
-        taskService.createTaskEdit(section.status);
-      });
+      taskService.create(section.status);
+    });
 
-      const dropzone = sectionElement.querySelector('[data-dropzone]');
+    const dropzone = sectionElement.querySelector('[data-dropzone]');
 
-      dropzone.addEventListener('dragover', e => e.preventDefault());
+    dropzone.addEventListener('dragover', e => e.preventDefault());
 
-      dropzone.addEventListener('drop', e => {
-        e.preventDefault();
-        taskService.cancelTaskEditing();
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      taskService.cancelTaskEditing();
 
-        const dataId = e.dataTransfer.getData('data-draggable-id');
-        const taskId = Number.parseInt(dataId.split('-')[1]);
+      const dataId = e.dataTransfer.getData('data-draggable-id');
+      const taskId = Number.parseInt(dataId.split('-')[1]);
 
-        const task = taskService.getTask(taskId);
+      const task = taskService.findById(taskId);
 
-        taskService.updateTask(taskId, { ...task, status: section.status });
-      });
+      taskService.update(taskId, { ...task, status: section.status });
+    });
 
-      return sectionElement;
-    },
+    return sectionElement;
+  },
 
-    sections() {
-      const sections = sectionService.getSections();
+  renderAll() {
+    const sections = sectionService.findAll();
 
-      const sectionContainer = document.querySelector('[data-section-container]');
+    const sectionContainer = document.querySelector('[data-section-container]');
 
-      if (!sections) {
-        sectionContainer.innerHTML = `
+    if (!sections) {
+      sectionContainer.innerHTML = `
         <div class="d-flex justify-content-center py-5">
           <img height="200" src = "./assets/load.svg" alt="Load"/>
         </div>
         `;
-        return;
-      }
-
-      sectionContainer.innerHTML = '';
-
-      sections.forEach(section => {
-        const sectionElement = this.section(section);
-        sectionContainer.appendChild(sectionElement);
-      });
+      return;
     }
-  }
+
+    sectionContainer.innerHTML = '';
+
+    sections.forEach(section => {
+      const sectionElement = this.render(section);
+      sectionContainer.appendChild(sectionElement);
+    });
+  },
 }
 
-const getDatabase = (databaseName, initialData) => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      const data = JSON.parse(localStorage.getItem(databaseName));
+  ; (renderItens = () => {
+    sectionService.renderAll();
 
-      resolve(data || initialData);
-    }, 1000);
-  });
-}
-
-getDatabase('sections', initialSectionData).then(data => {
-  sectionDatabase.currentId = data.currentId;
-  sectionDatabase.sections = data.sections;
-  sectionService.render.sections();
-  taskService.render.tasks();
-
-  getDatabase('tasks', initialTaskData).then(data => {
-    taskDatabase.currentId = data.currentId;
-    taskDatabase.tasks = data.tasks;
-    taskService.render.tasks();
-    taskService.cancelTaskEditing();
-  });
-});
-
-sectionService.render.sections();
-taskService.render.tasks();
+    sectionService.load().then(sectionData => {
+      sectionService.database = sectionData;
+      sectionService.renderAll();
+      taskService.renderAll();
+    }).then(() => {
+      taskService.load().then(data => {
+        taskService.database = data;
+        taskService.renderAll();
+        taskService.cancelTaskEditing();
+      });
+    });
+  })();

@@ -1,7 +1,7 @@
-i, [data-task-drop] {
+i, [draggable=true] {
   cursor: pointer;
 }
 
-[data-section] {
+.section-container {
   width: 500px;
 }
