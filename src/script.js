@@ -34,12 +34,12 @@ const taskService = {
     const taskIndex = this.database.tasks.findIndex(task => task.id === id);
     const taskOldStatus = this.database.tasks[taskIndex].status;
 
-    this.database.tasks[taskIndex] = task;
+    this.database.tasks[taskIndex] = {...task, id};
     this.save();
     
     const taskCard = $(`#task-${id}`);
 
-    if (taskOldStatus === task.status) {
+    if ((taskOldStatus === task.status) || task.editing) {
       $(`#task-${id}`).replaceWith(this.render(task));
     } else {
       $(`[data-dropzone="${taskOldStatus}"]`).removeChild(taskCard);
@@ -144,7 +144,7 @@ const taskService = {
       card.id = `task-${task.id}`;
       card.setAttribute('data-task-edit', true);
 
-      const string = `
+      card.innerHTML = `
                     <div class="card-body">
                       <form>
                         <div class="form-group pb-3">
@@ -167,8 +167,6 @@ const taskService = {
                       </form>
                     </div>
         `;
-
-      card.innerHTML = string;
 
       card.querySelector('[form-cancel]').addEventListener('click', () => taskService.cancelTaskEditing());
 
