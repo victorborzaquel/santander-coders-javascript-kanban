@@ -38,12 +38,13 @@ const taskService = {
     this.save();
     
     const taskCard = $(`#task-${id}`);
-
+    const taskData = this.findById(id);
+    
     if ((taskOldStatus === task.status) || task.editing) {
-      $(`#task-${id}`).replaceWith(this.render(task));
+      $(`#task-${id}`).replaceWith(this.render(taskData));
     } else {
       $(`[data-dropzone="${taskOldStatus}"]`).removeChild(taskCard);
-      $(`[data-dropzone="${task.status}"]`).appendChild(taskCard);
+      $(`[data-dropzone="${task.status}"]`).appendChild(this.render(taskData));
     }
   },
 
@@ -94,7 +95,7 @@ const taskService = {
 
     if (!task) return;
 
-    if (task.title === '' && task.description === '') {
+    if (task.title === '') {
       this.delete(task.id);
       return;
     }
